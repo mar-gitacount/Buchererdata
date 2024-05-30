@@ -22,6 +22,7 @@ class SQLiteDataInsert:
       
         # プライマリキーは一番目と想定して実装している。
          count = self.cursor.fetchall()[0][0]
+         print(f"これがあやしい→{count}　テーブル名{self.fields[0]}")
          testcount = count + 1
          print(f"{count}はもともとのカウント→は1足したやつ{testcount}")
          count += 1
@@ -32,9 +33,27 @@ class SQLiteDataInsert:
     
     # データを確認。
     def datacountcheck(self, value, field):
-         query = f"SELECT COUNT(*) FROM {self.table_name} WHERE {field} = ?"
+        #  フィールドを連結させる
+        # チェックする値が一つ以上
+         if len(field) > 1:
+            #   all_field_query = " AND ".join([f"{f}" for f in field[:-1]])
+              all_field_query = " AND ".join([f"{f} = ?" for f in field])
+
+              query = f"""SELECT COUNT(*) FROM {self.table_name} WHERE {all_field_query}"""
+                # バインドする値をリストに格納
+              
+            #   values = tuple([value] * len(field[:-1]))
+              print("クエリ→",query)
+              print(field)
+              print(value,"フィールドが1以上の時にはいるとこ")
+              self.cursor.execute(query, value)
+         else:
+              print("フィールドが一つ",value)
+              print(field)
+              query = f"SELECT COUNT(*) FROM {self.table_name} WHERE {field[0]} = ?"
+              self.cursor.execute(query, (value,))
         #  query = f"SELECT MAX({primary_key_field}) FROM {self.table_name}"
-         self.cursor.execute(query, (value,))
+         
          count = self.cursor.fetchone()[0]
          return count > 0
 
@@ -46,8 +65,8 @@ class SQLiteDataInsert:
             print(self.table_name)
             print(placeholders)
             # 一番目にfieldcountを入れ込む
-            incrementnum = self.fieldcountAllcountcheck()
-            values.insert(0,incrementnum)
+            # incrementnum = self.fieldcountAllcountcheck()
+            # values.insert(0,incrementnum)
 
             print(self.fields,"←値確認この数も合わせなければならない")
             print(values)

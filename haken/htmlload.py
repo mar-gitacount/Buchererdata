@@ -328,8 +328,8 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
 
 
                         # 以下はDBに入稿する配列存在するかチェックする。→インスタンスで実行する。
-                        wathitemcheck = watch_item_insert_instance.datacountcheck(key_to_add,"bucherer_watch_id")
-                        
+                        wathitemcheck = watch_item_insert_instance.datacountcheck(key_to_add,["bucherer_watch_id"])
+                        # アイテム自体の確認
                         if not wathitemcheck > 0:
                             watchitem_dbinsertvalues = [key_to_add,extracted_year,inputuse_item_name,Ref_No,"",bottom_lines,url]
                             # データがない場合入稿する。
@@ -362,10 +362,14 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                         dbinsert_datagetnow = datetime.strptime(json_datagetnow, "%Y-%m-%d")
                         dbinsert_datagetnow = dbinsert_datagetnow.strftime('%Y/%m/%d')
                         # 日付確認してなにもなければ代入する。
-                        weeklyitemchek = weekly_item_insert_instance.datacountcheck(dbinsert_datagetnow,"weekdate")
+                        # 複数フィールドを設定
+                        check_fields = ["weekdate","bucherer_watch_id"]
+                        check_values = [dbinsert_datagetnow,key_to_add]
+                        weeklyitemchek = weekly_item_insert_instance.datacountcheck(check_values,check_fields)
                         if not weeklyitemchek > 0:
                             # json_datagetnowを正しい形式になおす！
                             # json_datagetnow = json_datagetnow.strftime('%Y/%m/%d')
+           
                             weekly_item_dbinsertvalues = [dbinsert_datagetnow,"0",key_to_add,price]
                             weekly_item_insert_instance.insert_data(weekly_item_dbinsertvalues)
                         # ?フロー

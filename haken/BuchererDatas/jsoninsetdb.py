@@ -52,10 +52,7 @@ with open(file_path, "r") as json_file:
 for item, daysdata in data.items():
     # print(daysdata)
     # 日付確認する
-    count = weekly_report_inset_instance.datacountcheck(item,'weekdate')
-    print(count)
-    if count > 0:
-        continue
+   
     try:
         # ここで正常に動けばそれをdbにinsertする
         # print(item)
@@ -72,6 +69,8 @@ for item, daysdata in data.items():
              
              # 'price'を抽出する
              bucherer_watch_id = i
+
+             count = weekly_report_inset_instance.datacountcheck(item,['weekdate'])
              price = itemdict['price']
             #  値段
              price = int(price)
@@ -81,10 +80,16 @@ for item, daysdata in data.items():
              print(f"{price}で値段をチェックする")
              print(f"{i}はシリアルナンバー{itemdict}で値チェック{insert_date}は日付")
             #  weekly_table_fields = ['weekdate','ranking','price','bucherer_watch_id']
-             insert_values = [insert_date,"0",price,bucherer_watch_id]
-             print(insert_values)
-             weekly_report_inset_instance.insert_data(insert_values)
-
+             
+             check_fields = ["weekdate","bucherer_watch_id"]
+             check_values = [insert_date,i]
+            #  日付テーブルにデータを入稿する。
+             count = weekly_report_inset_instance.datacountcheck(check_values,check_fields)
+             if not count > 0:
+                 insert_values = [insert_date,"0",price,bucherer_watch_id]
+                 print(insert_values)
+                 weekly_report_inset_instance.insert_data(insert_values)
+             
             #  print(itemdict["price"])
 
              print(f"{type(i)}を取得する")
@@ -117,7 +122,7 @@ for item in masterdata:
     # データ入稿する。
     # print(item)
     # idでアイテム数をチェックする。
-    conut = watch_item_insert_instance.datacountcheck(item,'bucherer_watch_id')
+    conut = watch_item_insert_instance.datacountcheck(item,['bucherer_watch_id'])
     if conut > 0:
         continue
 

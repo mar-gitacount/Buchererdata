@@ -4,6 +4,21 @@ from datetime import datetime, timedelta
 from openpyxl import Workbook, load_workbook
 import os
 from datetime import datetime
+import jpholiday
+
+
+def is_holiday_or_weekend(date):
+    # 日付が日本の祝日かどうかを確認
+    if jpholiday.is_holiday(date):
+        return True
+    # 日付が土曜日か日曜日かどうかを確認
+    if date.weekday() >= 5:  # 5: Saturday, 6: Sunday
+        return True
+    return False
+
+
+
+
 def main():
     print("test")
     # インスタンスを作成する。
@@ -36,25 +51,34 @@ def main():
     # 一回目の探索 items['weekly_reports'] weekdateフィールドを探索する　インスタンス　を使う。
     # trueなら配列にいれる？？
     # 本日の値が入っていた場合配列に日付を入れる
-    week_date_count = items['weekly_reports'].datacountcheck(today_date_stringfomat,"weekdate")
+    week_date_count = items['weekly_reports'].datacountcheck(today_date_stringfomat,["weekdate"])
     week_items.append(today_date_stringfomat) if week_date_count else print("アイテムなし")
     print(f"{week_date_count}は週があるかどうか")
     diff_date = today_date
-
+    breakcount = 0
     while True:
+        
         # 日付で検索、falseの場合、-1日
         # 検索でヒットした場合、その値の月を取得、そのまえの日と比べて月を跨いだら処理終了
-        diff_date = diff_date-timedelta(1)
+        diff_date = diff_date-timedelta(7)
+        print(diff_date,"形式チェック")
+        if is_holiday_or_weekend(diff_date):
+            print(f"{diff_date}は休日または週末です。")
+            continue
+        else:
+            print(f"{diff_date}は平日です。")
         # 月を取得する  
         diff_date_month = diff_date.month
         # 文字列にする
         diff_date_string = diff_date.strftime('%Y/%m/%d')
         # 月が替わりかつそのアイテムがあればtrueになる。
-        week_date_count = items['weekly_reports'].datacountcheck(diff_date_string ,"weekdate")
+        week_date_count = items['weekly_reports'].datacountcheck(diff_date_string ,["weekdate"])
         
         #アイテムを加える。
         week_items.append(diff_date_string) if week_date_count else print("アイテムなし")
-        
+        breakcount += 1
+        if breakcount == 11:
+            break
         # n日のデータが入り、かつ別月の場合処理を抜ける
         if week_date_count and current_month != diff_date_month:
             break
@@ -102,7 +126,7 @@ def main():
     new_sheet = wb.create_sheet(title=today_date_stringfomat)
     monthdata = whocequeryinstance.days_diffcheck('weekly_reports',"test",week_items)
     
-    
+    # 一週前のデータと比較する処理。
     for id,dates in monthdata.items():
         print(f"呼び出し元→ID: {id}, Dates: {dates}")
         for date in dates:
