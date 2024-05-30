@@ -2,7 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from mypackage import utils
+# from mypackage import utils
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 import time
@@ -65,7 +65,7 @@ driver.get("https://www.bucherer.com/rolex-certified-pre-owned/watches?srule=Ran
 # button.click()
 
 #? 11で datetime <= timestamp
-test = utils.get_page_source("https://www.bucherer.com/rolex-certified-pre-owned/watches?srule=Ranking+by+Category+Position&sopt=relevance&start=0&sz=54")
+# test = utils.get_page_source("https://www.bucherer.com/rolex-certified-pre-owned/watches?srule=Ranking+by+Category+Position&sopt=relevance&start=0&sz=54")
 # testbtnget = test.find_all("button",class_="brb-btn")
 # ?whileで繰り返す。
 # ボタンがNoneになるまで

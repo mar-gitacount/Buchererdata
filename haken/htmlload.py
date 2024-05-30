@@ -5,8 +5,9 @@ from bs4 import BeautifulSoup
 import requests
 import re
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from mypackage import utils
+from BuchererDatas.sqlite_data_insert import SQLiteDataInsert
 
 # !jsonファイルのパス
 BuchererMainDatasjson = "BuchererDatas/BuchererMainDatas.json"
@@ -21,6 +22,23 @@ current_time = current_datetime.time()
 # 取得日をjsonファイルデータ名にする
 json_datagetnow = str(current_date)
 
+
+# db名
+dbname = 'BuchererDatas/bucherer.db'
+
+# 時計一覧のテーブル名
+wath_item_table = 'watch_item'
+# 時計一覧のフィールド名を設定する。
+wath_item_fields = ['bucherer_watch_id','year','model_name','ref','bracelet','dial','url']
+# 時計一覧のインスタンスを作成する。
+watch_item_insert_instance = SQLiteDataInsert(dbname,wath_item_table,wath_item_fields)
+
+# ウィークリーのテーブル名
+weekly_item_table = 'weekly_reports'
+# ウィークリーのフィールド名
+weekly_item_fields = ['weekdate','ranking','bucherer_watch_id','price']
+# ウィークリー一覧のインスタンスを作成する。
+weekly_item_insert_instance = SQLiteDataInsert(dbname,weekly_item_table,weekly_item_fields)
 
 # jsonファイルに存在するかどうか確認する
 def check_key_in_master(json_file, key, checkdatas="master"):
@@ -138,6 +156,10 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                 if response.status_code == 200:
                     soup = BeautifulSoup(response.text, "html.parser")
                     results = soup.find_all(class_="brb-product__detail-specs__value")
+                    # テーブルのタイトルを全て取得する。一致したテキストの次の文字を取得する。
+                    dateil_title = soup.find_all(class_="brb-product__detail-specs__title")
+                    for tag in dateil_title:
+                        print("タグ")
                     joint_text = ""
                     # 正規表現パターン
                     guarantee_pattern = re.compile(r"\bsales guarantee\b")
@@ -146,6 +168,7 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                         # マッチング
                         resultmatch = guarantee_pattern.search(result.text)
                         print(result.text)
+                        
                         joint_text += "\n" + result.text
                         # print(joint_text)
                         # print("マッチしない値も含めた場合は上")
@@ -208,7 +231,17 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                         # id_number = datails_match(2)
                         # ロットナンバーの正規表現パターン
                         Lot_pattern = re.compile(r"\d{4}-\d{3,}-\d{1,}")
-                        Ref_pattern = re.compile(r"\b\d{5,6}\b")
+
+
+                        # リファレンスナンバーを取得する。
+                        # 5桁でないと、金額なども入ってしまう。
+                        Ref_pattern = re.compile(r"\b\d{5,6}[A-Za-z]*\b")
+                        # Ref_pattern = re.compile(r"\b\d{5,6}\b")
+                        
+                        # Ref_pattern = re.compile(r"\bReference:\d{3,6}[A-Za-z]*\b")
+                        # Ref_pattern = re.compile(r"\b\d{4,6}*w\b")
+
+
                         # Ref_pattern = re.compile(r"\b[\w\d]{5,10}\b")
                         # 4桁の年代を抽出する正規表現パターン
                         year_pattern = re.compile(r"(\d{4})")
@@ -259,8 +292,11 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                         if Ref_matches:
                             for Ref_matche in Ref_matches:
                                 print(f"{Ref_matche}リファレンス")
+                                Ref_No = Ref_matche
+                                # Ref_No = Ref_matche.replace("Reference:","")
                         else:
                             print("マッチする行が見つかりませんでした。")
+                            Ref_No = "マッチしなかったので、手入力してください。"
 
                         # print(f'リファレンス{Ref_matches}')
                         size = size_and_material_match.group(1)
@@ -278,10 +314,11 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                         # ここでjsonファイルに入稿する。
                         # リファレンスナンバーで管理する
                         key_to_add = desired_match
+                        # 以下はjsonデータに入稿する変数
                         data_to_add = {
                             "model": inputuse_item_name,
                             "year": extracted_year,
-                            "ref": Ref_matche,
+                            "ref": Ref_No,
                             "size": size,
                             "price": price,
                             "bracelet": "",
@@ -289,6 +326,17 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                             "url": url,
                         }
 
+
+                        # 以下はDBに入稿する配列存在するかチェックする。→インスタンスで実行する。
+                        wathitemcheck = watch_item_insert_instance.datacountcheck(key_to_add,"bucherer_watch_id")
+                        
+                        if not wathitemcheck > 0:
+                            watchitem_dbinsertvalues = [key_to_add,extracted_year,inputuse_item_name,Ref_No,"",bottom_lines,url]
+                            # データがない場合入稿する。
+                            watch_item_insert_instance.insert_data(watchitem_dbinsertvalues)
+                       
+                        # # データ入稿する。
+                        # watch_item_insert_instance.insert_data(values)
                         if not check_key_in_master(BuchererMainDatasjson, key_to_add):
                             add_data_to_master(
                                 BuchererMainDatasjson,
@@ -308,11 +356,52 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                             key=key_to_add,
                             checkdatas=json_datagetnow,
                         )
+                        # weekly_item_fields = ['weekdate','ranking','bucherer_watch_id','price']
+                        # 以下はウィークリーデータを入稿する。
+                        # jsonデータに入稿していた形式をdb用に変換する。jsonデータの形式はそのままのこしておく。
+                        dbinsert_datagetnow = datetime.strptime(json_datagetnow, "%Y-%m-%d")
+                        dbinsert_datagetnow = dbinsert_datagetnow.strftime('%Y/%m/%d')
+                        # 日付確認してなにもなければ代入する。
+                        weeklyitemchek = weekly_item_insert_instance.datacountcheck(dbinsert_datagetnow,"weekdate")
+                        if not weeklyitemchek > 0:
+                            # json_datagetnowを正しい形式になおす！
+                            # json_datagetnow = json_datagetnow.strftime('%Y/%m/%d')
+                            weekly_item_dbinsertvalues = [dbinsert_datagetnow,"0",key_to_add,price]
+                            weekly_item_insert_instance.insert_data(weekly_item_dbinsertvalues)
                         # ?フロー
                         # アイテムナンバーが先週に存在するか→しない先々週→...いちども存在しない場合、赤文字で追加する。
                         # これは別ファイルでjsonを確認して実行する？全ての日付データ数を取得する。
                         # 毎回データを取りにいく。
                         # jsonファイル処理ここまで
+                        # 7日ループする。日付を一週間さかのぼって、月が替わる場合、二回ループする。
+                        # n日-n-七日 not = 月が変わった時点で処理抜ける。
+                        dbinsert_datagetnow = datetime.strptime(dbinsert_datagetnow,'%Y/%m/%d').date()
+                        # jsondataloadmakeexcel.pyに移植する。
+                        for i in range(4):
+                            print(i+1)
+                            adddate = i+1
+                            # 七日マイナスする。
+                            # 計算式= n日 - (7*(4-k))
+                            print(adddate)
+                            print(type(dbinsert_datagetnow))
+                            
+                            print(type(dbinsert_datagetnow))
+                            print(dbinsert_datagetnow)
+                          
+                            dbinsert_datagetnow_minusdate = dbinsert_datagetnow - timedelta(days=7*adddate)
+                            # 月が違う場合処理してbreakする。
+                            if dbinsert_datagetnow.month == dbinsert_datagetnow_minusdate.month:
+                                print("同じ月")
+                            else:
+                                print("違う月、ここでおわり")
+                            print(f"{dbinsert_datagetnow.month}と{dbinsert_datagetnow_minusdate.month}")
+                            # dbinsert_datagetnow_minusdate = dbinsert_datagetnow - timedelta(days=1)
+                            print(dbinsert_datagetnow_minusdate)
+                            
+
+                        
+                            
+
 
                         single_rowdata.append(desired_match)
                         single_rowdata.append(inputuse_item_name)

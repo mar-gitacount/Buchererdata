@@ -14,21 +14,28 @@ BuchererMainDatasjson = os.path.join(script_dir, "BuchererDatas/BuchererMainData
 
 # 本日の日付を取得する
 today_date = datetime.now().date()
+today_date = today_date.strftime('%Y/%m/%d')
+print(today_date,"変換された値")
 # 5週ループする
 # 直近の週を取得する
-near_date = utils.json_near_date_get(BuchererMainDatasjson, today_date)
-near_date = datetime.strptime(near_date, "%Y-%m-%d").date()
-dateitems = []
+# near_date = utils.json_near_date_get(BuchererMainDatasjson,1)
+# near_date = datetime.strptime(near_date, "%Y-%m-%d").date()
 
-# !5週する処理を書く
-week = 0
-while week < 5:
-    # この時点で、各週ごとのアイテムを格納する二次元配列にするもしくは辞書型
-    dateitems.append(near_date)
-    near_date = utils.json_near_date_get(BuchererMainDatasjson, near_date)
-    print(near_date)
-    near_date = datetime.strptime(near_date, "%Y-%m-%d").date()
-    week += 1
+# date_obj = datetime.strptime(item, "%Y-%m-%d")
+# insert_date = date_obj.strftime('%Y/%m/%d')
+
+
+# dateitems = []
+
+# # !5週する処理を書く
+# week = 0
+# while week < 5:
+#     # この時点で、各週ごとのアイテムを格納する二次元配列にするもしくは辞書型
+#     dateitems.append(near_date)
+#     near_date = utils.json_near_date_get(BuchererMainDatasjson, near_date)
+#     print(near_date)
+#     near_date = datetime.strptime(near_date, "%Y-%m-%d").date()
+#     week += 1
 
 # print(dateitems)
 

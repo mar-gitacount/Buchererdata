@@ -2,7 +2,7 @@ import os
 import json
 import csv
 from bs4 import BeautifulSoup
-import requests
+# import requests
 import re
 import sys
 from openpyxl import Workbook, load_workbook
@@ -11,6 +11,7 @@ from datetime import datetime
 import os
 import json
 from datetime import datetime
+from BuchererDatas.sqlite_data_insert import SQLiteDataInsert
 
 
 def extract_single_digit(text):
@@ -150,5 +151,9 @@ with open(BuchererMainDatasjson, "r", encoding="utf-8") as file:
         print(modelreplasename)
         print("---------------------------------------")
         ws.append(row_items)
+# ここでアイテムを回す。
+# 日付を探索する処理を書く。
+
+
 wb.save(file_name)
 # return key in master_data
