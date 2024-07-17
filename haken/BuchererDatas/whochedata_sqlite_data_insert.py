@@ -1,6 +1,8 @@
 from sqlite_data_insert import SQLiteDataInsert
 import sqlite3
-
+import os
+import time
+from datetime import datetime
 class WhocheSqliteDataInsert(SQLiteDataInsert):
     def __init__(self,db_file):
         # db名をわたす、そして、そのdbを探索し、テーブル、フィールドを渡す。最終的にはアクセス可能なテーブル一覧を返す?
@@ -15,6 +17,8 @@ class WhocheSqliteDataInsert(SQLiteDataInsert):
         # SQLクエリを実行してテーブル名を取得
         self.cursor.execute(query)
         tables = self.cursor.fetchall()
+        today_date_and_time = datetime.now().strftime("%Y%m%d%H%M%S")
+        self.db_logfile_name = f"dbログ_{today_date_and_time}.txt"
 
         # 取得したテーブル名をリストに格納
         self.table_names = [table[0] for table in tables]
@@ -23,12 +27,12 @@ class WhocheSqliteDataInsert(SQLiteDataInsert):
             print("ここでフィールド名を取得し、辞書型で返す。")
             self.cursor.execute(f"PRAGMA table_info({table})")
             columns = self.cursor.fetchall()
-            print(columns)
+            # print(columns)
             # フィールドをループする。
             columun = []
             for fieldname in columns:
                 # 以下はフィールド名
-                print(fieldname)
+                # print(fieldname)
                 print(fieldname[1])
                 columun.append(fieldname[1])
                 # プロパティに持たせるインスタンスを作成して、それを辞書型にする。その辞書型の中には、
@@ -41,7 +45,13 @@ class WhocheSqliteDataInsert(SQLiteDataInsert):
             # print(self.tablesdateill)
             # super().__init__(db_file,table,columns)
             # フィールド名は2番目に格納されている。
-    
+    def close_connection(self):
+         if self.conn:
+            self.conn.close()
+            self.conn = None
+    def save_logs_to_file(self,logs, file_path):
+        with open(file_path, "a", encoding="utf-8") as file:
+             file.write(str(logs) + "\n")
     def instansemake(self,value):
         #  色々使える。インスタンスを返す。呼び出し元でメソッドを利用する。
          print("親クラスを利用するためのインスタンス作成する。")
@@ -55,10 +65,13 @@ class WhocheSqliteDataInsert(SQLiteDataInsert):
             print(value,"は入れる値")
 
             super().insert_data(value)  
-           
+
+    def all_datacheck(self,value,day):
+        # watch_item のなかの一致するアイテムを全て取得する。
+        print("データ抽出")
+        # self.cursor.execute(f"""SELECT * FROM {teb}""")       
     # 値検索ですべてのアイテムを返す
     def days_diffcheck(self,settingtablename,value,daysArray):
-        # 
         print(value,"←メソッドに渡された値")
         # 日付が二つわたされる。
         # 日付1n で全検索、日付1の全値が返ってくるので、それをループ
@@ -68,13 +81,19 @@ class WhocheSqliteDataInsert(SQLiteDataInsert):
         # 日付ループ終了
         # 日付1　n-1ループへ
         # 処理がすべて終了した場合、配列を返す
-        
         # days.remove(value)
         # 日付ループする。
         temptablesString = ""
         for day in daysArray:
             #  日ごとテーブルを作成する。
             temptebalename = "temp_"+ day.replace("/","_")
+            self.cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name=?;", (temptebalename,))
+            tempfilecheck = self.cursor.fetchone()
+            if tempfilecheck:
+                 print(temptebalename)
+                 self.cursor.execute(f"DROP TABLE IF EXISTS {temptebalename}")
+            # 一時ファイルの削除、一時ファイルが存在する場合、削除、しない場合、作成。
+            print(temptebalename,"は一時テーブル確認")
             self.cursor.execute(f"DROP TABLE IF EXISTS {temptebalename}")
             self.cursor.execute(f"""CREATE TEMP TABLE {temptebalename} AS SELECT * FROM {settingtablename} WHERE weekdate = ?""", (day,))
             self.cursor.execute(f"""SELECT * FROM {temptebalename}""")
@@ -82,20 +101,12 @@ class WhocheSqliteDataInsert(SQLiteDataInsert):
             item = self.cursor.fetchall()
             print(temptablesString)
         temp_tables_list = temptablesString.split(",")
-
-
-        intersect_query = " INTERSECT ".join([f"SELECT bucherer_watch_id FROM {table}" for table in temp_tables_list[:-1]])   
-        
-
-        # 和集合を取得
-        all_union_query = " UNION ".join([f"SELECT bucherer_watch_id, weekdate FROM {table}" for table in temp_tables_list[:-1]])
-        
-        
-        
-        print(f"{intersect_query}は積集合クエリ")
-        # 4C4 = 一通り 4個の集合すべてに一致するクエリ
+        print(temp_tables_list)
        
-             
+        intersect_query = " INTERSECT ".join([f"SELECT bucherer_watch_id FROM {table}" for table in temp_tables_list[:-1]])   
+        # 和集合を取得
+        all_union_query = " UNION ".join([f"SELECT bucherer_watch_id, weekdate FROM {table}" for table in temp_tables_list[:-1]])   
+        print(f"{intersect_query}は積集合クエリ")
         union_query = f"""
         CREATE TEMP TABLE ALLUNIONTABLE AS
         SELECT *
@@ -103,28 +114,9 @@ class WhocheSqliteDataInsert(SQLiteDataInsert):
         WHERE bucherer_watch_id IN ({intersect_query})
         """
 
-        # 以下で和集合取得する。
-        # 日付をなおすのをわすれずに！！
-        # self.cursor.execute("""
-        # CREATE TEMP TABLE WatchID_Intersect AS
-        # SELECT bucherer_watch_id, weekdate
-        # FROM (
-        # SELECT bucherer_watch_id, weekdate FROM temp_2024_05_23
-        # UNION
-        # SELECT bucherer_watch_id, weekdate FROM temp_2024_05_22
-        # UNION
-        # SELECT bucherer_watch_id, weekdate FROM temp_2024_05_21
-        # UNION
-        # SELECT bucherer_watch_id, weekdate FROM temp_2024_05_20
-        #  ) AS all_dates;
-        #  """)
-         # 和集合を取得する前に一時テーブルが存在する場合は削除
         self.cursor.execute("DROP TABLE IF EXISTS WatchID_Intersect")
         print(all_union_query,"をチェック")
-        self.cursor.execute(f"""
-        CREATE TEMP TABLE WatchID_Intersect AS
-        SELECT bucherer_watch_id, weekdate
-        FROM ( {all_union_query} ) AS all_dates;
+        self.cursor.execute(f"""CREATE TEMP TABLE WatchID_Intersect AS SELECT bucherer_watch_id, weekdate FROM ( {all_union_query} ) AS all_dates;
          """)
         self.cursor.execute("SELECT * FROM WatchID_Intersect")
         # print(self.cursor.fetchall(),"ここ")
@@ -136,12 +128,16 @@ class WhocheSqliteDataInsert(SQLiteDataInsert):
              if id not in id_dates_dict:
                   id_dates_dict[id] = []
              id_dates_dict[id].append(date)
+             
+
 
         # 結果の表示
         for id, dates in id_dates_dict.items():
              print(f"ID: {id}, Dates: {dates}")
-        return id_dates_dict
 
+        # self.conn.close()
+        return id_dates_dict
+        
 
       
              

@@ -1,0 +1,6 @@
+
+        CREATE TEMP TABLE ALLUNIONTABLE AS
+        SELECT *
+        FROM temp_2024_06_17
+        WHERE bucherer_watch_id IN (SELECT bucherer_watch_id FROM temp_2024_06_17 INTERSECT SELECT bucherer_watch_id FROM temp_2024_06_10 INTERSECT SELECT bucherer_watch_id FROM temp_2024_06_03 INTERSECT SELECT bucherer_watch_id FROM temp_2024_05_27)
+        

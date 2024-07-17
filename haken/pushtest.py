@@ -194,8 +194,10 @@ else:
 # C:\Users\01794\Desktop\仕事でつかうやつ\Buchererデータ抽出\haken\htmlload.py
 html_load_file = "htmlload.py"
 jsondataloademake_file ="jsondataloadmakeexcel.py"
+excel_inset = "BuchererDatas/test.py"
 subprocess.run(["python",html_load_file])
 subprocess.run(["python",jsondataloademake_file])
+# subprocess.run(["python",excel_inset])
 
 
 # with open("test.html", "w", encoding="utf-8") as f:

@@ -40,6 +40,27 @@ weekly_item_fields = ['weekdate','ranking','bucherer_watch_id','price']
 # ウィークリー一覧のインスタンスを作成する。
 weekly_item_insert_instance = SQLiteDataInsert(dbname,weekly_item_table,weekly_item_fields)
 
+
+# デバッグ書き込み用関数
+def debug_insert_text(txt,file_path):
+    if os.path.exists(file_path):
+        print(f"ファイルが存在します。上書きします: {file_path}")
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(str(txt))
+    else:
+        print(f"ファイルが存在しません。新しいファイルを作成します: {file_path}")
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(str(txt))
+
+def save_logs_to_file(logs, file_path):
+    # ここでアイテム一覧の配列を作ってしまう。
+    # ここでの配列は二つで一つの二次元配列になる。
+
+    with open(file_path, "a", encoding="utf-8") as file:
+        file.write(str(logs) + "\n")
+
+
+
 # jsonファイルに存在するかどうか確認する
 def check_key_in_master(json_file, key, checkdatas="master"):
     with open(json_file, "r", encoding="utf-8") as file:
@@ -82,7 +103,9 @@ brbproducts_list_array_index = 0
 brbproduct = ""
 single_rowdata = []
 
-# CSVファイルを書き込みモードで開く
+errot_file_name = f"HTMLエラーログ_{current_date}.txt"
+
+# HTMLファイルを書き込みモードで開き、配列に追加する
 with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
     try:
         with open(html_file_path, "r", encoding="utf-8") as file:
@@ -101,7 +124,7 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                         continue
                     else:
                         brbproduct += brbproduct + "\n" + item
-
+                        # 値段を検索する。
                         chf_match = chf_pattern.search(item)
                         if chf_match:
                             brbproducts_list_array.append(brbproduct)
@@ -114,17 +137,28 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
             # class="brb-products__item__link brb-products__item__link--cpo"
 
         brbproducts_list_array_index = 0
-
+        # save_logs_to_file(brbproducts_list_array ,errot_file_name)
         with open(urlcsv_relative_path, "w", newline="", encoding="utf-8") as url_file:
             url_csv_writer = csv.writer(url_file)
             brbproducts_url_list = soup.find_all(class_="brb-products__item__link")
-            print(f"要素数表題数:{len(brbproducts_list_array)}")
-            print(f"要素数リンク={len(brbproducts_url_list)}")
+            # 各アイテム
+            brb_products_items = soup.find_all(class_="brb-products__item")
+            # brb_products_items_soup = BeautifulSoup(brb_products_items, "html.parser")
 
-            for itemurl in brbproducts_url_list:
+            # checkurls = "---url---"+ brbproducts_url_list + "--url---"
+            # save_logs_to_file(checkurls,errot_file_name)
+            itemscheck = f"アイテム数:{len(brbproducts_list_array)}\nURLリンク数={len(brbproducts_url_list)}"
+            # save_logs_to_file(itemscheck,errot_file_name)
+            # 取得したURLの数だけループする
+            for brb_products_item in brb_products_items:
                 # data-tracking属性からJSONデータを取得
+                # brb_products_item_soup = BeautifulSoup(brb_products_item, "html.parser")
+                # 各アイテムのhtmlファイルをはりつけ
+                # save_logs_to_file(brb_products_item,errot_file_name)
+                itemurl = brb_products_item.find(class_="brb-products__item__link")               
                 data_tracking = itemurl.get("data-tracking-ga4")
                 data_json = json.loads(data_tracking)
+                
                 # 年代を初期化
                 extracted_year = ""
                 print(data_json)
@@ -134,6 +168,10 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                 print("二つの値を比べる")
                 # item_idを抽出
                 item_id = data_json.get("item_id")
+                use_id = item_id
+                # URLが存在していない場合、そのページは存在しないので、continueする。
+                if not use_id:
+                    continue
                 item_id = item_id + ".html"
                 item_name = data_json.get("item_name")
                 inputuse_item_name = item_name.strip()
@@ -160,15 +198,42 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                     dateil_title = soup.find_all(class_="brb-product__detail-specs__title")
                     for tag in dateil_title:
                         print("タグ")
-                    joint_text = ""
+                  
                     # 正規表現パターン
                     guarantee_pattern = re.compile(r"\bsales guarantee\b")
                     # テキストを繰り返す
+                    # 表示中のテキストを抽出する
+
+                    # アイテム名
+                    try:
+                        front_status_text = brb_products_item.find("span",class_="brb-products__item__title").text +"\n"
+                    except Exception as e:
+                        print("タイトルがない")
+                        front_status_text = ""
+                    # 年代、mm
+                    try:
+                        front_status_text = front_status_text +  brb_products_item.find("span",class_="brb-products__item__subtitle").text +"\n"
+                    except Exception as e:
+                        print("サブタイトルがない")
+                    # 値段
+                    try:
+                        front_status_text = front_status_text +  brb_products_item.find("span",class_="value").text +"\n"
+                    except Exception as e:
+                        print("値段がない")
+                    joint_text = ""
+                    joint_text = (
+                        # 表示されているすべてのステータスが記載されている。
+                        front_status_text
+                        # brbproducts_list_array[brbproducts_list_array_index]
+                        + "\n"
+                        + joint_text
+                    )
+                    # 商品単体のループ　URL内にはいって詳細を探索する。
+                    # 
                     for result in results:
                         # マッチング
                         resultmatch = guarantee_pattern.search(result.text)
-                        print(result.text)
-                        
+                        print(result.text)                        
                         joint_text += "\n" + result.text
                         # print(joint_text)
                         # print("マッチしない値も含めた場合は上")
@@ -185,11 +250,7 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                         #     brbproducts_list_array_index += 1
 
                         #     joint_text = ''
-                    joint_text = (
-                        brbproducts_list_array[brbproducts_list_array_index]
-                        + "\n"
-                        + joint_text
-                    )
+    
                     with open("output.txt", "w") as f:
                         # リダイレクトを元に戻す
                         sys.stdout = f
@@ -278,10 +339,15 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                             desired_match = next(
                                 match for match in matches if "-" in match
                             )
+                            inputerro_text = "----------\n"+joint_text+"\n"+ url +"\n----------"
+                            save_logs_to_file(inputerro_text,errot_file_name)
                         except Exception as e:
                             # 他のすべての例外に対する処理
                             print(f"例外が発生しました: {e}:次のループに入ります")
-                            continue
+                            inputerro_text = "-----エラー-----\n"+use_id+joint_text+ "\n"+ url +"\n-----エラー-----"
+                            save_logs_to_file(inputerro_text ,errot_file_name)
+                            desired_match = use_id
+                            # continue
                         print(
                             "-----------------LOTまではマッチングまでは完了している---------------------"
                         )
@@ -299,16 +365,36 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                             Ref_No = "マッチしなかったので、手入力してください。"
 
                         # print(f'リファレンス{Ref_matches}')
-                        size = size_and_material_match.group(1)
-
-                        # サイズを抽出する正規表現パターン
+                         # サイズを抽出する正規表現パターン
                         size_pattern = re.compile(r"(\d+)\s*mm")
-                        # サイズマッチング
-                        size = size_pattern.search(size)
-                        size = size.group(1) + "mm"
-                        print(f"{size}がサイズ")
-                        # 金額
-                        price = size_and_material_match.group(2).replace("'", "")
+                        # スイスフランを抽出するパターン
+                        price_pattern = re.compile(r"CHF ([\d,\']+)")
+                        size_get = size_pattern.search(joint_text)
+                        price_get = price_pattern.search(joint_text)
+                        if size_get:
+                            # サイズを代入する
+                            size = size_get.group(1)
+                        else:
+                            size = "0"
+
+                        if price_get:
+                            price = price_get.group(1)
+                            price = int(price.replace("'", ""))
+                        else:
+                            price = 0
+                        print(size,"←サイズ")
+                        print(price,"値段")
+                        
+
+                        # size = size_and_material_match.group(1)
+
+                       
+                        # # サイズマッチング
+                        # size = size_pattern.search(size)
+                        # size = size.group(1) + "mm"
+                        # print(f"{size}がサイズ")
+                        # # 金額
+                        # price = size_and_material_match.group(2).replace("'", "")
                         print(price)
                         single_rowdata = []
                         # ここでjsonファイルに入稿する。
@@ -369,7 +455,6 @@ with open(csv_file_path, "w", newline="", encoding="utf-8") as csv_file:
                         if not weeklyitemchek > 0:
                             # json_datagetnowを正しい形式になおす！
                             # json_datagetnow = json_datagetnow.strftime('%Y/%m/%d')
-           
                             weekly_item_dbinsertvalues = [dbinsert_datagetnow,"0",key_to_add,price]
                             weekly_item_insert_instance.insert_data(weekly_item_dbinsertvalues)
                         # ?フロー

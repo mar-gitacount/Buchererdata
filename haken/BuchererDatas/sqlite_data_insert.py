@@ -12,7 +12,31 @@ class SQLiteDataInsert:
         self.fields = fields
     
 
+    # フィールドと検索値で結果を返すメソッド
+    def serachitem(self,values,fields):
+         print("値を検索する")
          
+         placeholders = ', '.join(['?'] * (len(fields)))
+         fields_str = ', '.join(self.fields)
+        # 検索クエリの生成
+         conditions = " AND ".join([f"{field} = ?" for field in fields])
+         search_query = f"SELECT * FROM {self.table_name} WHERE ({conditions})"
+         print(search_query)
+       
+         # データベースに接続してクエリを実行
+         cursor = self.conn.cursor()
+         cursor.execute(search_query, values)
+         results = cursor.fetchall()
+        #  self.conn.close()
+
+         return results
+    
+    def close_connection(self):
+         if self.conn:
+            self.conn.close()
+            self.conn = None
+
+
     # フィールドのなかの値の数を返す。
     def fieldcountAllcountcheck(self,):
          print(self.table_name,"テーブル名をチェックする")
@@ -22,7 +46,7 @@ class SQLiteDataInsert:
       
         # プライマリキーは一番目と想定して実装している。
          count = self.cursor.fetchall()[0][0]
-         print(f"これがあやしい→{count}　テーブル名{self.fields[0]}")
+         print(f"これがあやしい→{count}テーブル名{self.fields[0]}")
          testcount = count + 1
          print(f"{count}はもともとのカウント→は1足したやつ{testcount}")
          count += 1
@@ -30,8 +54,42 @@ class SQLiteDataInsert:
          
          return count
         #  print(query)
+    # データ一覧を閲覧
+    def excehngevalue(self,new_size,new_ref,id):
+             print(f"サイズ:{new_size} リファレンス:{new_ref} ID:{id}")
+            #  self.conn.begin() 
+             update_query = f"UPDATE watch_item SET size = ?, ref = ? WHERE bucherer_watch_id = ?"
+             self.cursor.execute(update_query, (new_size, new_ref, id))
+             # コミットして変更を確定させる。
+             print("conn前")
+             self.conn.commit()
+            # query = f"INSERT OR REPLACE INTO {self.table_name} ({fields_str}) VALUES ({placeholders})"
     
-    # データを確認。
+
+         
+    # field＝フィールド value=要素
+    def dataget(self,field):
+        placeholders = ', '.join(['?'] * (len(self.fields)))
+        # idも取得しなければならない
+
+        query = f"SELECT * FROM {self.table_name}"
+        # query = f"SELECT {field} FROM {self.table_name}"
+        self.cursor.execute(query)
+        all_items = self.cursor.fetchall()
+        cleansing_items = []
+        for item in all_items:
+             print(list(item))
+             cleansing_items.append(list(item))
+        return cleansing_items
+    
+    # アイテム名を指定して削除する。
+    def datedelete(self,field,value):
+        # query = f"DELETE FROM {self.table_name} WHERE {field} = ?"
+        query = f"UPDATE {self.table_name} SET {field} = '' WHERE {field} = ?"
+        self.cursor.execute(query, (value,))
+        self.conn.commit()
+         
+    # データ数を確認。
     def datacountcheck(self, value, field):
         #  フィールドを連結させる
         # チェックする値が一つ以上
@@ -59,8 +117,8 @@ class SQLiteDataInsert:
 
     
     def insert_data(self,values):
-         # 動的なプレースホルダーのリスト
-        
+            # 動的なプレースホルダーのリスト
+            
             placeholders = ', '.join(['?'] * (len(self.fields)))
             print(self.table_name)
             print(placeholders)
@@ -77,6 +135,8 @@ class SQLiteDataInsert:
             # 動的なクエリを生成
             query = f"INSERT OR REPLACE INTO {self.table_name} ({fields_str}) VALUES ({placeholders})"
             self.cursor.execute(query, values)
+            # 
+            
             self.conn.commit()  # トランザクションをコミット
 
     

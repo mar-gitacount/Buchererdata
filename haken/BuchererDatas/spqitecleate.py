@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS watch_item (
     bucherer_watch_id TEXT NOT NULL UNIQUE,
     year TEXT,
     model_name TEXT NOT NULL,
+    size TEXT,
     ref TEXT,
     bracelet TEXT,
     dial TEXT,

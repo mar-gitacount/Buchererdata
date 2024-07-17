@@ -14,7 +14,7 @@ dbname = 'bucherer.db'
 # テーブル名
 table_name = 'watch_item'
 # DBのフィールド名を設定する。
-fields = ['bucherer_watch_id','year','model_name','ref','bracelet','dial','url']
+fields = ['bucherer_watch_id','year','model_name','size','ref','bracelet','dial','url']
 
 # DB名、テーブル名、フィールド名を設定したインスタンスを作成する。
 watch_item_insert_instance = SQLiteDataInsert(dbname,table_name,fields)
@@ -95,7 +95,6 @@ for item, daysdata in data.items():
              print(f"{type(i)}を取得する")
              if isinstance(i ,dict):
                   insert_date = date_obj.strftime('%Y/%m/%d')
-                  
                   try:
                       search = str(i)
                       print(i.get("price"))
@@ -126,10 +125,10 @@ for item in masterdata:
     if conut > 0:
         continue
 
-    values = [item,datas["year"],datas["model"],datas["ref"],datas["bracelet"],datas["dial"], datas["url"]]
-    # c.execute('''INSERT OR REPLACE INTO watch_item(bucherer_watch_id, year, model_name, ref, bracelet, dial, url) VALUES (?, ?, ?, ?, ?, ?, ?)''', (item, datas["year"], datas["model"], datas["ref"], datas["bracelet"], datas["dial"], datas["url"]))
+    values = [item, datas["year"], datas["model"], datas["ref"], datas["size"], datas["bracelet"], datas["dial"], datas["url"]]
+    c.execute('''INSERT OR REPLACE INTO watch_item(bucherer_watch_id, year, model_name, size ,ref, bracelet, dial, url) VALUES (?, ?, ?, ?, ?, ?, ?,?)''', (item, datas["year"], datas["model"], datas["ref"], datas["size"], datas["bracelet"], datas["dial"], datas["url"]))
 
-    # conn.commit()
+    conn.commit()
     # print("------")
 # # 読み込んだデータを表示する
 # # print(data["master"])
