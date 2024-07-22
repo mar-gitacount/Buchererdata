@@ -13,6 +13,7 @@ from selenium.webdriver.common.by import By
 import time
 import math
 from openpyxl.styles import PatternFill
+import re
 
 def is_holiday_or_weekend(date):
     # 日付が日本の祝日かどうかを確認
@@ -85,7 +86,7 @@ def main():
     print(tablename,"テーブル名")
     # 現在の日付を取得
     today_date = datetime.now().strftime("%Y%m%d")
-    file_name = f"ブヘラ{today_date}.xlsx"
+    file_name = f"BUCHRER CPOリスト{today_date}.xlsx"
     errot_file_name = f"HTMLエラーログ_{today_date_and_time}.txt"
   
     # print(items,"アイテム名")
@@ -104,7 +105,11 @@ def main():
     # 変換後
     today_date_stringfomat = today_date.strftime('%Y/%m/%d')
     last_element = None
-    
+    modelnames = {"date":"DATE","datejust":"DJ","cosmograph-daytona":"DAYTONA","day-date":"DD","cellini":"その他","oyster-perpetual":"OP","yacht-master":"YACHT","sky-dweller":"SKY","sea-dweller":"SEA-DWELLER","turn-o-graph":"DJ","gmt-master-ii":"GMT","gmt-master":"GMT","submariner":"SUB","submariner-date":"SUB","deepsea":"DEEPSEA","explorer-ii":"EX","explorer":"EX"}
+    material_codes = {"0":"SS","1":"SR","2":"SP","3":"SY","4":"SW","5":"RG","6":"PT","7":"TI","8":"YG","9":"WG"}
+    # モデル名抽出。正規表現パターン
+    modelpattern = r'https://www\.bucherer\.com/rolex-certified-pre-owned/watches/([^/]+)/'
+    numpattern = r'\d+'
     # 一回目の探索 items['weekly_reports'] weekdateフィールドを探索する　インスタンス　を使う。
     # trueなら配列にいれる？？
     # 本日の値が入っていた場合配列に日付を入れる
@@ -281,6 +286,7 @@ def main():
         new_index=[""]*15
         save_logs_to_file(f"呼び出し元→ID: {id}, Dates: {dates}",errot_file_name)
         #  week_date_count = items['weekly_reports'].datacountcheck(diff_date_string ,["weekdate"])
+        # 前の週の値段と比較する
         if len(dates) == 2:
             # 
             before_date_price = items['weekly_reports'].serachitem([id,dates[0]],["bucherer_watch_id","weekdate"])
@@ -293,19 +299,47 @@ def main():
             save_logs_to_file(itemvalue,errot_file_name)
             
             itemvalue = list(itemvalue[0])
+
+            # モデル名取得。
+            modelmatch = re.search(modelpattern,itemvalue[8])
+            if modelmatch:
+                modelValue  = modelmatch.group(1)
+            else:
+                modelValue = itemvalue[8]
+            # 辞書チェック
+            if modelValue in modelnames:
+                model_input_value = modelnames[modelValue]
+            else:
+                model_input_value = "その他"
+            
+            material_code_match = re.search(numpattern,itemvalue[5])
+            if material_code_match:
+
+                material_code = material_code_match.group()
+                lastnum = material_code[-1:]
+                if lastnum in material_codes:
+                    material_code = material_codes[lastnum]
+                
+            else:
+                material_code = "エラー素材コードを手で入力してください。"
+
             
             new_index.insert(0,indexnum)
             # アイテムナンバー
             new_index.insert(1,itemvalue[1])
             # モデル名
-            new_index.insert(2,itemvalue[3])
+            # new_index.insert(2,itemvalue[3])
+            new_index.insert(2,model_input_value)
             # 年代
             new_index.insert(3,itemvalue[2])
             # サイズ
-            new_index.insert(4,itemvalue[5])
-             # 素材あとで数字に帰る
-            new_index.insert(5,itemvalue[4])
-            new_index.insert(6,itemvalue[4])
+            new_index.insert(4,itemvalue[4])
+           
+            # 素材あとで数字に帰る
+            # new_index.insert(5,itemvalue[4])
+            # 素材コード
+            new_index.insert(5,material_code)
+            new_index.insert(6,itemvalue[5])
             # ブレスレット
             new_index.insert(7,itemvalue[6])
             # ダイアル
@@ -348,22 +382,43 @@ def main():
                 # 時計一覧テーブルを検索している。
                 itemvalue = bucherer_table_instance.serachitem([id],["bucherer_watch_id"])
                 itemvalue = list(itemvalue[0])
+                
                 save_logs_to_file(itemvalue,errot_file_name)
                 #   0        1           2                    3                     4       5     6           7                         8                        
                 # [929, '1411-689-9', '2016', 'Datejust  Certified Pre-Owned', '178383', '31mm', '3', 'sales box (original)', 'https://www.bucherer.com/rolex-certified-pre-owned/watches/datejust/1411-689-9.html']
                 # アイテムナンバー
+                modelmatch = re.search(modelpattern,itemvalue[8])
+                if modelmatch:
+                    modelValue  = modelmatch.group(1)
+                else:
+                    modelValue = itemvalue[8]
+                # 辞書チェック
+                if modelValue in modelnames:
+                    model_input_value = modelnames[modelValue]
+                else:
+                    model_input_value = "その他"
+                print(itemvalue,"全データ")
+                print(itemvalue[4],"これは素材コードの元")
+                material_code_match = re.search(numpattern,itemvalue[5])
+                if material_code_match:
+                    lastnum = material_code[-1:]
+                    material_code = material_code_match.group()
+                    if lastnum in material_codes:
+                        material_code = material_codes[lastnum]
+                else:
+                    material_code = "エラー素材コードを手で入力してください。"
                 new_index.insert(0,indexnum)
-                # アイテムナンバー
+                 # アイテムナンバー
                 new_index.insert(1,itemvalue[1])
-                # モデル名
-                new_index.insert(2,itemvalue[3])
+                 # モデル名
+                new_index.insert(2,model_input_value)
                 # 年代
                 new_index.insert(3,itemvalue[2])
                 # サイズ
-                new_index.insert(4,itemvalue[5])
-                # 素材あとで数字に帰る
-                new_index.insert(5,itemvalue[4])
-                new_index.insert(6,itemvalue[4])
+                new_index.insert(4,itemvalue[4])
+                # 素材あとで数字に変える
+                new_index.insert(5,material_code)
+                new_index.insert(6,itemvalue[5])
                 # ブレスレット
                 new_index.insert(7,itemvalue[6])
                 # ダイアル
@@ -379,7 +434,7 @@ def main():
                 new_index.insert(10, f'=TEXT(J{last_row + 1}, "¥#,##0") * {chf_rate}')
 
                 new_index.insert(11,0)
-                # url
+                 # url
                 new_index.insert(13,itemvalue[8])
                 save_logs_to_file(f"{before_date_price}が{dates[0]}の金額データ",errot_file_name)
                 new_sheet.append(new_index)
@@ -390,13 +445,34 @@ def main():
             # falseの場合は、売れなので、それを代入
             # とりあえず配列に退避させる
             else:
-                            # 決算シートに入荷として代入する。
+                # 決算シートに入荷として代入する。
                 before_date_price = items['weekly_reports'].serachitem([id,dates[0]],["bucherer_watch_id","weekdate"])
                 before_date_price = list(before_date_price[0])
                 # 時計一覧テーブルを検索している。
                 itemvalue = bucherer_table_instance.serachitem([id],["bucherer_watch_id"])
                 itemvalue = list(itemvalue[0])
                 save_logs_to_file(itemvalue,errot_file_name)
+                modelmatch = re.search(modelpattern,itemvalue[8])
+                if modelmatch:
+                    modelValue  = modelmatch.group(1)
+                else:
+                    modelValue = itemvalue[8]
+                # 辞書チェック
+                if modelValue in modelnames:
+                    model_input_value = modelnames[modelValue]
+                else:
+                    model_input_value = "その他"
+
+                print(itemvalue,"全データ")
+                print(itemvalue[4],"これは素材コードの元")
+                material_code_match = re.search(numpattern,itemvalue[5])
+                if material_code_match:
+                    material_code = material_code_match.group()
+                    lastnum = material_code[-1:]
+                    if lastnum in material_codes:
+                        material_code = material_codes[lastnum]
+                else:
+                    material_code = "エラー素材コードを手で入力してください。"
                 #   0        1           2                    3                     4       5     6           7                         8                        
                 # [929, '1411-689-9', '2016', 'Datejust  Certified Pre-Owned', '178383', '31mm', '3', 'sales box (original)', 'https://www.bucherer.com/rolex-certified-pre-owned/watches/datejust/1411-689-9.html']
                 # アイテムナンバー
@@ -404,14 +480,14 @@ def main():
                 # アイテムナンバー
                 new_index.insert(1,itemvalue[1])
                 # モデル名
-                new_index.insert(2,itemvalue[3])
+                new_index.insert(2,model_input_value)
                 # 年代
                 new_index.insert(3,itemvalue[2])
                 # サイズ
-                new_index.insert(4,itemvalue[5])
+                new_index.insert(4,itemvalue[4])
                 # 素材あとで数字に帰る
-                new_index.insert(5,itemvalue[4])
-                new_index.insert(6,itemvalue[4])
+                new_index.insert(5,material_code)
+                new_index.insert(6,itemvalue[5])
                 # ブレスレット
                 new_index.insert(7,itemvalue[6])
                 # ダイアル
