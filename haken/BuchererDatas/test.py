@@ -159,16 +159,17 @@ def main():
         week_date_count = items['weekly_reports'].datacountcheck(diff_date_string ,["weekdate"])
         save_logs_to_file(f"{diff_date_string}は日付チェック",errot_file_name)
         # n日のデータが入り、かつ別月の場合処理を抜ける。
+        week_items.append(diff_date_string) if week_date_count else print("アイテムなし")
         if week_date_count and current_month != diff_date_month:
             break
-        #アイテムを加える。
-        week_items.append(diff_date_string) if week_date_count else print("アイテムなし")
+        
+        
         breakcount += 1
         # ここでbreakしてしまうと、処理がエラーになる
         if breakcount == 31:
             break
 
-        if len(week_items) >= 4:
+        if len(week_items) >= 5:
             break
     # 各週をチェックする。
     # save_logs_to_file(f"{week_items}に本日分が存在するか確認",errot_file_name)
